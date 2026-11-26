@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Camera body -->
+    <path
+        android:fillColor="#E0F2FE"
+        android:pathData="M30,38h10l4,-6h20l4,6h10c3.3,0 6,2.7 6,6v28c0,3.3 -2.7,6 -6,6H30c-3.3,0 -6,-2.7 -6,-6V44C24,40.7 26.7,38 30,38z" />
+    <!-- Outer lens ring -->
+    <path
+        android:fillColor="#0D1B2A"
+        android:pathData="M54,58m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <!-- Location pin inside lens -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M54,48c-4.4,0 -8,3.6 -8,8c0,5.6 8,13 8,13s8,-7.4 8,-13C62,51.6 58.4,48 54,48zM54,58.5c-1.4,0 -2.5,-1.1 -2.5,-2.5s1.1,-2.5 2.5,-2.5s2.5,1.1 2.5,2.5S55.4,58.5 54,58.5z" />
+    <!-- Shield corner indicator -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M74,26l8,3v6c0,5.2 -3.4,9.9 -8,11.3c-4.6,-1.4 -8,-6.1 -8,-11.3v-6L74,26z" />
+</vector>
