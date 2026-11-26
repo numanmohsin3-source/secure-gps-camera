@@ -226,103 +226,103 @@ fun CameraScreen(
             }
         }
 
-        // Top controls bar
+        // Compact GPS & Protection status pill (top-left)
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(Color(0x66000000))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .align(Alignment.TopStart)
+                .padding(top = 24.dp, start = 14.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (gpsStamp.isMockLocation) Color(0xCC991B1B)
+                    else Color(0x99111827)
+                )
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = {
-                        flashMode = when (flashMode) {
-                            ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
-                            ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
-                            else -> ImageCapture.FLASH_MODE_OFF
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = when (flashMode) {
-                            ImageCapture.FLASH_MODE_ON -> Icons.Default.FlashOn
-                            ImageCapture.FLASH_MODE_AUTO -> Icons.Default.FlashAuto
-                            else -> Icons.Default.FlashOff
-                        },
-                        contentDescription = "Flash",
-                        tint = Color.White
-                    )
-                }
+            Icon(
+                imageVector = if (gpsStamp.isMockLocation) Icons.Default.Warning else Icons.Default.Shield,
+                contentDescription = null,
+                tint = when {
+                    gpsStamp.isMockLocation -> Color(0xFFFCA5A5)
+                    gpsStamp.hasLocationFix -> Color(0xFF10B981)
+                    else -> Color(0xFFF59E0B)
+                },
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = when {
+                    gpsStamp.isMockLocation -> "Mock GPS!"
+                    gpsStamp.hasLocationFix -> "GPS ±${gpsStamp.accuracyMeters.roundToInt()}m"
+                    else -> "Fixing GPS..."
+                },
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
 
-                IconButton(
-                    onClick = {
-                        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                            CameraSelector.LENS_FACING_FRONT
-                        } else {
-                            CameraSelector.LENS_FACING_BACK
-                        }
+        // Right-side vertical floating control rail: Flash, Camera Rotate, Lock, Settings
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 24.dp, end = 12.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0x880B1018))
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    flashMode = when (flashMode) {
+                        ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
+                        ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
+                        else -> ImageCapture.FLASH_MODE_OFF
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cameraswitch,
-                        contentDescription = "Switch Camera",
-                        tint = Color.White
-                    )
                 }
-            }
-
-            // GPS & Protection status pill
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (gpsStamp.isMockLocation) Color(0xCC991B1B)
-                        else Color(0x99111827)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (gpsStamp.isMockLocation) Icons.Default.Warning else Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = when {
-                        gpsStamp.isMockLocation -> Color(0xFFFCA5A5)
-                        gpsStamp.hasLocationFix -> Color(0xFF10B981)
-                        else -> Color(0xFFF59E0B)
+                    imageVector = when (flashMode) {
+                        ImageCapture.FLASH_MODE_ON -> Icons.Default.FlashOn
+                        ImageCapture.FLASH_MODE_AUTO -> Icons.Default.FlashAuto
+                        else -> Icons.Default.FlashOff
                     },
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = when {
-                        gpsStamp.isMockLocation -> "Mock GPS!"
-                        gpsStamp.hasLocationFix -> "GPS ±${gpsStamp.accuracyMeters.roundToInt()}m"
-                        else -> "Fixing GPS..."
-                    },
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    contentDescription = "Flash",
+                    tint = if (flashMode == ImageCapture.FLASH_MODE_OFF) Color.White else Color(0xFFFBBF24)
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onLockNow) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Lock Vault",
-                        tint = Color(0xFF38BDF8)
-                    )
+            IconButton(
+                onClick = {
+                    lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
                 }
-                IconButton(onClick = onOpenSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = Color.White
-                    )
-                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Cameraswitch,
+                    contentDescription = "Switch Camera",
+                    tint = Color.White
+                )
+            }
+
+            IconButton(onClick = onLockNow) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Lock Vault",
+                    tint = Color(0xFF38BDF8)
+                )
+            }
+
+            IconButton(onClick = onOpenSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = Color.White
+                )
             }
         }
 
