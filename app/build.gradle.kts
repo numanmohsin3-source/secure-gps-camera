@@ -18,34 +18,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    signingConfigs {
-        create("release") {
-            val ksPath = System.getenv("KEYSTORE_PATH")
-            val ksFile = when {
-                !ksPath.isNullOrBlank() && file(ksPath).exists() -> file(ksPath)
-                !ksPath.isNullOrBlank() && rootProject.file(ksPath).exists() -> rootProject.file(ksPath)
-                rootProject.file("release.keystore").exists() -> rootProject.file("release.keystore")
-                file("release.keystore").exists() -> file("release.keystore")
-                else -> null
-            }
-            if (ksFile != null && ksFile.exists()) {
-                storeFile = ksFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android123"
-                keyAlias = System.getenv("KEY_ALIAS") ?: "gpscam"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "android123"
-            }
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
-            val sc = signingConfigs.getByName("release")
-            signingConfig = if (sc.storeFile != null && sc.storeFile?.exists() == true) {
-                sc
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
