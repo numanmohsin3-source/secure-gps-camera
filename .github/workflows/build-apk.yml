@@ -38,8 +38,10 @@ jobs:
 
       - name: Generate signing keystore if secrets not set
         run: |
+          mkdir -p app
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+            cp release.keystore app/release.keystore
             echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/release.keystore" >> $GITHUB_ENV
             echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
             echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
@@ -51,6 +53,7 @@ jobs:
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass android123 -keypass android123 \
               -dname "CN=GPS Map Camera, O=SecureGPS, C=PK"
+            cp release.keystore app/release.keystore
             echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/release.keystore" >> $GITHUB_ENV
             echo "KEYSTORE_PASSWORD=android123" >> $GITHUB_ENV
             echo "KEY_ALIAS=gpscam" >> $GITHUB_ENV
@@ -58,13 +61,14 @@ jobs:
           fi
 
       - name: Build Debug and Release APKs
-        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+        run: gradle assembleRelease assembleDebug --no-daemon
 
       - name: Build Play Store App Bundle (AAB)
         continue-on-error: true
-        run: gradle bundleRelease --no-daemon --stacktrace || gradle bundle --no-daemon --stacktrace || true
+        run: gradle bundleRelease --no-daemon || true
 
       - name: Upload Release APK (R8 Obfuscated & Signed)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: GPS-Map-Camera-Release-APK
