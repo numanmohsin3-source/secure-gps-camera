@@ -38,10 +38,11 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VerticalSplit
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -371,7 +372,7 @@ fun CameraScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Splitscreen,
+                    imageVector = Icons.Default.VerticalSplit,
                     contentDescription = null,
                     tint = Color(0xFF38BDF8),
                     modifier = Modifier.size(16.dp)
@@ -446,7 +447,7 @@ fun CameraScreen(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Default.Splitscreen,
+                    imageVector = Icons.Default.VerticalSplit,
                     contentDescription = "Double Screen",
                     tint = if (isDualMode) Color(0xFF38BDF8) else Color.White
                 )
