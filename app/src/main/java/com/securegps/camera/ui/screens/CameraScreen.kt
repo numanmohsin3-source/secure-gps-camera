@@ -622,15 +622,6 @@ fun CameraScreen(
                 }
             }
         }
-                    Icon(
-                        imageVector = Icons.Default.EditNote,
-                        contentDescription = "Edit Note",
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
-        }
     }
 
     if (showNoteDialog) {
