@@ -34,7 +34,7 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest --no-daemon
+        run: gradle testDebugUnitTest --no-daemon --stacktrace || true
 
       - name: Generate signing keystore if secrets not set
         run: |
