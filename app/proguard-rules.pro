@@ -1,8 +1,5 @@
-# R8 / ProGuard hardening for SecureGPS Camera
--optimizationpasses 5
--allowaccessmodification
--repackageclasses 'o'
--flattenpackagehierarchy 'o'
+# Standard ProGuard / R8 rules for SecureGPS Camera
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 # Strip verbose debug logs in release builds
 -assumenosideeffects class android.util.Log {
@@ -12,8 +9,8 @@
     public static int i(...);
 }
 
-# Keep Kotlin metadata minimally needed for Compose / Coroutines
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-dontwarn androidx.**
+-dontwarn com.google.**
 
-# Keep our data models serialized manually if needed
--keep class com.securegps.camera.data.VaultPhotoMeta { *; }
+# Keep data models
+-keep class com.securegps.camera.data.** { *; }
