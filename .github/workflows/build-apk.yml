@@ -56,25 +56,25 @@ jobs:
 
       - name: Build APKs (Debug & Release)
         run: |
-          gradle assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee build_output.log
+          set -o pipefail
+          gradle assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log || {
+            echo "## Gradle Build Error Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 60 build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Upload Release APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: GPS-Map-Camera-Release-APK
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
       - name: Upload Debug APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: GPS-Map-Camera-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
-
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: GPS-Camera-Build-Log
-          path: build_output.log
+          if-no-files-found: error
