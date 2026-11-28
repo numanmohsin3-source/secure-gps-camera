@@ -38,7 +38,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,7 +85,8 @@ fun CameraScreen(
     customNote: String,
     isCapturing: Boolean,
     onStartLocation: () -> Unit,
-    onPhotoCaptured: (File) -> Unit,
+    onPhotoCaptured: (File, File?) -> Unit,
+    onSharePhoto: (String) -> Unit,
     onUpdateNote: (String) -> Unit,
     onOpenVault: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -138,6 +142,11 @@ fun CameraScreen(
     var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_OFF) }
     var showNoteDialog by remember { mutableStateOf(false) }
 
+    // Dual-screen capture mode state
+    var isDualMode by remember { mutableStateOf(false) }
+    var dualFirstFile by remember { mutableStateOf<File?>(null) }
+    var dualFirstBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
     var latestThumb by remember { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(latestPhoto?.id) {
         latestThumb = if (latestPhoto != null) loadThumbnail(latestPhoto.id) else null
@@ -176,10 +185,98 @@ fun CameraScreen(
             .background(Color.Black)
     ) {
         if (hasCameraPerm) {
-            AndroidView(
-                factory = { previewView },
-                modifier = Modifier.fillMaxSize()
-            )
+            if (isDualMode && dualFirstBitmap != null) {
+                // Split Screen: Left half = Frozen 1st Photo, Right half = Live running camera
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .background(Color.Black)
+                    ) {
+                        Image(
+                            bitmap = dualFirstBitmap!!.asImageBitmap(),
+                            contentDescription = "First Captured Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Badge indicating frozen shot
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 60.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xCC0F172A))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("1st Photo", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Retake button for 1st shot
+                        IconButton(
+                            onClick = {
+                                dualFirstFile?.delete()
+                                dualFirstFile = null
+                                dualFirstBitmap?.recycle()
+                                dualFirstBitmap = null
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xAA000000))
+                        ) {
+                            Icon(Icons.Default.Replay, contentDescription = "Retake 1st photo", tint = Color.White)
+                        }
+                    }
+
+                    // Divider line
+                    Box(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .fillMaxSize()
+                            .background(Color.White)
+                    )
+
+                    // Right half: Live Camera preview keeps running!
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                    ) {
+                        AndroidView(
+                            factory = { previewView },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 8.dp, top = 60.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xCC0F172A))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("2nd (Live Camera)", color = Color(0xFF10B981), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // If Dual Mode is active but first photo not yet taken, show guide line
+                if (isDualMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .width(1.5.dp)
+                            .fillMaxSize()
+                            .background(Color(0x66FFFFFF))
+                    )
+                }
+            }
         } else {
             Column(
                 modifier = Modifier
@@ -262,7 +359,34 @@ fun CameraScreen(
             )
         }
 
-        // Right-side vertical floating control rail: Flash, Camera Rotate, Lock, Settings
+        // Top banner for Dual Mode instructions
+        if (isDualMode) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 22.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xDD0F172A))
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Splitscreen,
+                    contentDescription = null,
+                    tint = Color(0xFF38BDF8),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (dualFirstBitmap == null) "Double Screen: Tap Shutter for 1st Photo" else "1st Photo Saved! Frame 2nd & Tap Shutter",
+                    color = Color.White,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        // Right-side vertical floating control rail: Flash, Camera Rotate, Double Screen, Lock, Settings
         Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -309,6 +433,25 @@ fun CameraScreen(
                 )
             }
 
+            // Double Screen / Dual Capture Toggle
+            IconButton(
+                onClick = {
+                    isDualMode = !isDualMode
+                    if (!isDualMode) {
+                        dualFirstFile?.delete()
+                        dualFirstFile = null
+                        dualFirstBitmap?.recycle()
+                        dualFirstBitmap = null
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Splitscreen,
+                    contentDescription = "Double Screen",
+                    tint = if (isDualMode) Color(0xFF38BDF8) else Color.White
+                )
+            }
+
             IconButton(onClick = onLockNow) {
                 Icon(
                     imageVector = Icons.Default.Lock,
@@ -343,14 +486,14 @@ fun CameraScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Vault gallery thumbnail button
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF1E293B))
                         .border(1.5.dp, Color(0xFF475569), RoundedCornerShape(12.dp))
@@ -370,12 +513,31 @@ fun CameraScreen(
                             imageVector = Icons.Default.PhotoLibrary,
                             contentDescription = "Vault",
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
 
-                // Shutter button
+                // Share button (shares latest photo to WhatsApp, Facebook, etc.)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (latestPhoto != null) Color(0xFF1E293B) else Color(0x661E293B))
+                        .clickable(enabled = latestPhoto != null) {
+                            latestPhoto?.let { onSharePhoto(it.id) }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = if (latestPhoto != null) Color(0xFF38BDF8) else Color(0xFF64748B),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                // Shutter button (supports Single Shot & Double Screen 2-in-1 merge)
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -383,7 +545,14 @@ fun CameraScreen(
                         .border(4.dp, Color.White, CircleShape)
                         .padding(6.dp)
                         .clip(CircleShape)
-                        .background(if (isCapturing) Color(0xFF38BDF8) else Color.White)
+                        .background(
+                            when {
+                                isCapturing -> Color(0xFF38BDF8)
+                                isDualMode && dualFirstBitmap != null -> Color(0xFF10B981)
+                                isDualMode -> Color(0xFF0284C7)
+                                else -> Color.White
+                            }
+                        )
                         .clickable(enabled = hasCameraPerm && !isCapturing) {
                             val rawTemp = File.createTempFile("raw_gps_", ".jpg", context.cacheDir)
                             val opts = ImageCapture.OutputFileOptions.Builder(rawTemp).build()
@@ -392,7 +561,22 @@ fun CameraScreen(
                                 ContextCompat.getMainExecutor(context),
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                        onPhotoCaptured(rawTemp)
+                                        if (isDualMode) {
+                                            if (dualFirstFile == null) {
+                                                // Step 1: 1st side captured! Freeze it on left side.
+                                                dualFirstFile = rawTemp
+                                                dualFirstBitmap = com.securegps.camera.camera.WatermarkRenderer.loadRotatedBitmap(rawTemp)
+                                            } else {
+                                                // Step 2: 2nd side captured! Combine both into 1 photo.
+                                                val first = dualFirstFile!!
+                                                dualFirstFile = null
+                                                dualFirstBitmap?.recycle()
+                                                dualFirstBitmap = null
+                                                onPhotoCaptured(first, rawTemp)
+                                            }
+                                        } else {
+                                            onPhotoCaptured(rawTemp, null)
+                                        }
                                     }
 
                                     override fun onError(exception: ImageCaptureException) {
@@ -409,18 +593,34 @@ fun CameraScreen(
                             strokeWidth = 3.dp,
                             modifier = Modifier.size(28.dp)
                         )
+                    } else if (isDualMode) {
+                        Text(
+                            text = if (dualFirstBitmap == null) "1/2" else "2/2",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
                     }
                 }
 
                 // Quick note editor button
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF1E293B))
                         .clickable { showNoteDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.EditNote,
+                        contentDescription = "Edit Note",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
                     Icon(
                         imageVector = Icons.Default.EditNote,
                         contentDescription = "Edit Note",

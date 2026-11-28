@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.text.Layout
@@ -21,6 +22,7 @@ import java.io.File
  * - Top-right floating pill badge ("GPS Map Camera")
  * - Bottom translucent card with square satellite thumbnail + red pin on the left
  * - City/State/Country + Flag, full multi-line address, Lat/Long, Date/Time GMT, and Note on the right.
+ * - Supports dual side-by-side split screen merging into a single composite image.
  */
 object WatermarkRenderer {
 
@@ -44,6 +46,40 @@ object WatermarkRenderer {
         val rotated = Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
         if (rotated !== raw) raw.recycle()
         return rotated
+    }
+
+    /**
+     * Merges two captured photos side-by-side into a single composite high-resolution image.
+     */
+    fun mergeDualBitmaps(first: Bitmap, second: Bitmap): Bitmap {
+        val targetHeight = maxOf(first.height, second.height)
+        val scale1 = targetHeight.toFloat() / first.height.toFloat()
+        val scale2 = targetHeight.toFloat() / second.height.toFloat()
+        val w1 = (first.width * scale1).toInt().coerceAtLeast(1)
+        val w2 = (second.width * scale2).toInt().coerceAtLeast(1)
+        val dividerWidth = (targetHeight * 0.005f).toInt().coerceAtLeast(6)
+
+        val merged = Bitmap.createBitmap(w1 + dividerWidth + w2, targetHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(merged)
+        canvas.drawColor(Color.BLACK)
+
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+        val srcRect1 = Rect(0, 0, first.width, first.height)
+        val dstRect1 = Rect(0, 0, w1, targetHeight)
+        canvas.drawBitmap(first, srcRect1, dstRect1, paint)
+
+        val divPaint = Paint().apply {
+            color = Color.WHITE
+            strokeWidth = dividerWidth.toFloat()
+        }
+        val divX = w1 + dividerWidth / 2f
+        canvas.drawLine(divX, 0f, divX, targetHeight.toFloat(), divPaint)
+
+        val srcRect2 = Rect(0, 0, second.width, second.height)
+        val dstRect2 = Rect(w1 + dividerWidth, 0, w1 + dividerWidth + w2, targetHeight)
+        canvas.drawBitmap(second, srcRect2, dstRect2, paint)
+
+        return merged
     }
 
     fun stampGpsOverlay(source: Bitmap, stamp: GpsStampData): Bitmap {

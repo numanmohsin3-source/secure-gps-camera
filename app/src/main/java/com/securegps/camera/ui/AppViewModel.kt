@@ -223,10 +223,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun processAndSaveCapturedImage(tempRawFile: File) {
+    fun processAndSaveCapturedImage(tempRawFile: File, secondTempFile: File? = null) {
         val currentState = _uiState.value
         if (currentState.blockMockGps && currentState.gpsStamp.isMockLocation) {
             tempRawFile.delete()
+            secondTempFile?.delete()
             setStatusMessage("Capture blocked: Mock/Fake GPS location detected!")
             return
         }
@@ -239,18 +240,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     note = _uiState.value.customNote
                 )
                 withContext(Dispatchers.Default) {
-                    val upright = WatermarkRenderer.loadRotatedBitmap(tempRawFile)
-                    val stamped = WatermarkRenderer.stampGpsOverlay(upright, stamp)
-                    vault.saveCapturedPhoto(stamped, stamp)
-                    if (stamped !== upright) upright.recycle()
+                    val baseBitmap = if (secondTempFile != null) {
+                        val firstBmp = WatermarkRenderer.loadRotatedBitmap(tempRawFile)
+                        val secondBmp = WatermarkRenderer.loadRotatedBitmap(secondTempFile)
+                        val merged = WatermarkRenderer.mergeDualBitmaps(firstBmp, secondBmp)
+                        firstBmp.recycle()
+                        secondBmp.recycle()
+                        merged
+                    } else {
+                        WatermarkRenderer.loadRotatedBitmap(tempRawFile)
+                    }
+
+                    val stamped = WatermarkRenderer.stampGpsOverlay(baseBitmap, stamp)
+                    val meta = vault.saveCapturedPhoto(stamped, stamp)
+                    // Auto-save to phone gallery as requested
+                    vault.exportToPublicGallery(meta.id)
+
+                    if (stamped !== baseBitmap) baseBitmap.recycle()
                     stamped.recycle()
                 }
                 refreshVault()
-                setStatusMessage("Photo encrypted & saved to Vault")
+                setStatusMessage("Photo saved to Gallery & Vault")
             } catch (e: Exception) {
                 setStatusMessage("Capture error: ${e.message ?: "Unknown error"}")
             } finally {
                 tempRawFile.delete()
+                secondTempFile?.delete()
                 _uiState.update { it.copy(isCapturing = false) }
             }
         }

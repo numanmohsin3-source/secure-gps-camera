@@ -1,5 +1,6 @@
 package com.securegps.camera
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
@@ -17,6 +18,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.securegps.camera.security.BiometricHelper
 import com.securegps.camera.ui.AppViewModel
 import com.securegps.camera.ui.screens.CameraScreen
@@ -24,6 +26,7 @@ import com.securegps.camera.ui.screens.PinLockScreen
 import com.securegps.camera.ui.screens.SettingsScreen
 import com.securegps.camera.ui.screens.VaultScreen
 import com.securegps.camera.ui.theme.SecureGpsTheme
+import kotlinx.coroutines.launch
 
 private enum class AppScreen {
     CAMERA, VAULT, SETTINGS
@@ -107,8 +110,29 @@ class MainActivity : FragmentActivity() {
                                 customNote = state.customNote,
                                 isCapturing = state.isCapturing,
                                 onStartLocation = { viewModel.startLocationUpdates() },
-                                onPhotoCaptured = { rawFile ->
-                                    viewModel.processAndSaveCapturedImage(rawFile)
+                                onPhotoCaptured = { rawFile1, rawFile2 ->
+                                    viewModel.processAndSaveCapturedImage(rawFile1, rawFile2)
+                                },
+                                onSharePhoto = { photoId ->
+                                    lifecycleScope.launch {
+                                        val uri = viewModel.prepareShareUri(photoId)
+                                        if (uri != null) {
+                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "image/jpeg"
+                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            startActivity(
+                                                Intent.createChooser(shareIntent, "Share GPS Map Photo")
+                                            )
+                                        } else {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Failed to prepare photo for sharing",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
                                 },
                                 onUpdateNote = { note -> viewModel.updateNote(note) },
                                 onOpenVault = {
